@@ -25,14 +25,21 @@ app.get('/oauth2callback', async (req, res) => {
   res.send('Autenticación exitosa, tus tokens son: ' + JSON.stringify(tokens));
 });
 
-// Acceder a la API de Google Classroom
 app.get('/classroom', async (req, res) => {
   try {
+    if (!oAuth2Client.credentials) {
+      return res.redirect('/auth'); // Redirige a login si no hay credenciales
+    }
+
     const classroom = google.classroom({ version: 'v1', auth: oAuth2Client });
     const courses = await classroom.courses.list();
-    res.json(courses);
+    res.json(courses.data);
   } catch (error) {
-    res.status(500).send('Error al obtener datos de Google Classroom: ' + error);
+    if (error.message.includes('invalid_grant')) {
+      res.send('La sesión expiró. <a href="/auth">Inicia sesión nuevamente</a>');
+    } else {
+      res.status(500).send('Error: ' + error.message);
+    }
   }
 });
 
